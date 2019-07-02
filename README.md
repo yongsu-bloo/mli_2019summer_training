@@ -9,3 +9,6 @@ torchvision 0.3.0
 ```bash
 pip3 install -r requirements.txt
 ```
+
+### 구현 목록
+- [Seq2Seq](seq2seq)
