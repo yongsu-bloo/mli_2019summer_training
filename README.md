@@ -8,6 +8,10 @@
 
 ### Install Dependencies
 ```bash
+pip install -r requirements.txt
+```
+or
+```bash
 pip3 install -r requirements.txt
 ```
 
