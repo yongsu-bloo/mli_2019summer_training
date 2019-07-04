@@ -15,6 +15,7 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 
 from beam_search import *
+from bleu import *
 ### Utils
 tt = time.time
 def tokenize(text):
@@ -78,7 +79,7 @@ class Decoder(nn.Module):
     def forward(self, input, hidden):
         """
         input1: (batch of) words. size: [batch_size]
-        input2: (batch of) hidden from last layer(decoder) or context vector from encoder.
+        input2: (batch of) hidden from last layer(decoder) or context vector from encoder. [num_layers*num_directions, batch_size, output_dim]
         output1: (batch of) translated words. size: [batch_size, output_dim]
         output2: same type of input2
         """
@@ -105,14 +106,14 @@ class Seq2Seq(nn.Module):
     def forward(self, source, target):
         """
         input: (batch of) pairs of source and target sequences. size: [sentence_length, batch_size]
+        output: (batch of) translated sentences. size: (train)[max_sentence_length, batch_size, target_vocab_size], (test)[max_sentence_length, batch_size]
         """
         max_length = target.shape[0]
         batch_size = target.shape[1]
-        outputs = torch.zeros(max_length, batch_size, self.decoder.output_dim, device=device)
 
         hidden = self.encoder(source)
-
         if self.training:
+            outputs = torch.ones(max_length, batch_size, self.decoder.output_dim, device=device) * target_field.vocab.stoi['<sos>']
             input = target[0,:] # a batch of <sos>'s'
             for i in range(1, max_length):
                 # Teacher forcing
@@ -121,13 +122,19 @@ class Seq2Seq(nn.Module):
                 input = target[i]
         else:
             # Beam Search: top 2
+            outputs = torch.zeros(max_length, batch_size, device=device)
             beam_width = 2
             n_sen = 1
             t1 = tt()
-            decode_batch = beam_decode(self.decoder, target, hidden, beam_width, n_sen)
+            decode_batch = beam_decode(self.decoder, target, hidden, beam_width, n_sen) # returns: python list of sentence(list of str). size: [batch_size, sentence_length]
             t2 = tt()
-            print("Beam Search: {:.3f} sec\n".format(t2-t1))
-            outputs = torch.tensor(decode_batch)
+            # print("Beam Search: {:.3f} sec\n".format(t2-t1))
+            for i in range(batch_size):
+                if len(decode_batch[i]) < max_length:
+                    output = F.pad(torch.tensor(decode_batch[i], dtype=torch.int), (0, max_length - len(decode_batch[i])), 'constant', target_field.vocab.stoi['<eos>'])
+                else:
+                    output = torch.tensor(decode_batch[i], dtype=torch.int)
+                outputs[:,i] = output
 
         return outputs
 ### Train and Evaluation
@@ -153,11 +160,13 @@ def train(model, iterator, optimizer, criterion):
 
         optimizer.step()
         epoch_loss += loss.item()
+        # break # for debugging
     return epoch_loss / len(iterator)
 
 def evaluate(model, iterator, criterion):
+    #@TODO bleu score
     model.eval()
-    epoch_loss = 0
+    bleu_score = 0
     with torch.no_grad():
         for i, batch in enumerate(iterator):
 
@@ -165,15 +174,11 @@ def evaluate(model, iterator, criterion):
             trg = batch.trg
 
             output = model(src, trg)
+            trg = trg.transpose(0,1)
+            output = output.transpose(0,1)
+            bleu_score += get_bleu(output, trg)
+    return bleu_score
 
-            trg = trg[1:].view(-1)
-            output = output[1:].view(-1, output.shape[-1])
-
-            loss = criterion(output, trg)
-
-            epoch_loss += loss.item()
-
-    return epoch_loss / len(iterator)
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-seed', type=int, default=9)
@@ -217,7 +222,7 @@ if __name__ == "__main__":
 
     params = [batch_size, rnn_type, reverse, bidirectional, num_layers, emd_dim, hidden_dim,
                 lr]
-    PATH = os.path.join("models", "seq2seq-{}".format("-".join(str(params))))
+    PATH = os.path.join("models", "seq2seq-{}".format("-".join([ str(p) for p in params ])))
     # Preparing data
     t1 = tt()
     spacy_de = spacy.load('de')
@@ -268,12 +273,17 @@ if __name__ == "__main__":
     criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
 
     loss = 0
-    best_eval_loss = float("inf")
+    best_eval_score = -float("inf")
     for epoch in tqdm(range(epochs), desc="Total train (# epochs)"):
+        tt1 = tt()
         train_loss = train(model, train_iterator, optimizer, criterion)
-        eval_loss = evaluate(model, valid_iterator, criterion)
-        print("Train loss: {:.4f}, Eval loss: {:.4f}\n".format(train_loss, eval_loss))
-        if eval_loss < best_eval_loss:
+        tt2 = tt()
+        print("Train time per epoch: {:.3f}".format(tt2-tt1))
+        eval_score = evaluate(model, valid_iterator, criterion)
+        tt3 = tt()
+        print("Eval time per epoch: {:.3f}".format(tt3-tt2))
+        print("Train loss: {:.4f}, BLEU score: {:.4f}\n".format(train_loss, eval_score))
+        if eval_score >= best_eval_score:
             torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
@@ -281,9 +291,9 @@ if __name__ == "__main__":
                     'loss': loss,
                     'args': args
                     }, PATH + "-{}.ckpt".format(epoch))
-            best_eval_loss = eval_loss
+            best_eval_score = eval_score
             print("Best Model Updated\n")
-
+        # break # for debugging
     t2 = tt()
     print("Model Training ends ({:.3f} min)\n".format((t2-t1) / 60))
     torch.save({
