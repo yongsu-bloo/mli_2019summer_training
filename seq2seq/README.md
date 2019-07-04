@@ -11,7 +11,11 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
   year={2014}
 }
 ```
-
+### Requirements
+```bash
+python -m spacy download en
+python -m spacy download de
+```
 ### Usage
 @TODO
 
@@ -27,7 +31,7 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
 
 2. Model
 ```
-[Source Sentence] -> (Encoder) -> [Context Vector]
+[Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Target Sentence]
 ```
 
 3.

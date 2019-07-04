@@ -103,7 +103,7 @@ class Seq2Seq(nn.Module):
         """
         max_length = target.shape[0]
         batch_size = target.shape[1]
-        outputs = torch.zeros(max_length, args.batch_size, self.decoder.output_dim, device=device)
+        outputs = torch.zeros(max_length, batch_size, self.decoder.output_dim, device=device)
 
         hidden = self.encoder(source)
 
