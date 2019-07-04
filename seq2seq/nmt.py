@@ -142,7 +142,7 @@ def train(model, iterator, optimizer, criterion):
     model.train()
     epoch_loss = 0
     clip = 1
-    for i, batch in enumerate(iterator), desc="a epoch (# batches)":
+    for i, batch in enumerate(iterator):
         optimizer.zero_grad()
 
         src = batch.src
@@ -272,13 +272,16 @@ if __name__ == "__main__":
     optimizer = optim.SGD(model.parameters(), lr=1e-3) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
 
-    loss = 0
+    train_losses = []
+
     best_eval_score = -float("inf")
-    for epoch in range(epochs), desc="Total train (# epochs)":
+    for epoch in range(epochs):
         tt1 = tt()
         train_loss = train(model, train_iterator, optimizer, criterion)
         tt2 = tt()
         print("[{}/{}]Train time per epoch: {:.3f}".format(epoch, epochs, tt2-tt1))
+        train_losses.append(train_loss)
+
         eval_score = evaluate(model, valid_iterator, criterion)
         tt3 = tt()
         print("[{}/{}]Eval time per epoch: {:.3f}".format(epoch, epochs, tt3-tt2))
@@ -288,7 +291,7 @@ if __name__ == "__main__":
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'loss': loss,
+                    'losses': train_losses,
                     'args': args
                     }, PATH + "-{}.ckpt".format(epoch))
             best_eval_score = eval_score
@@ -300,7 +303,7 @@ if __name__ == "__main__":
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss': loss,
+            'losses': train_losses,
             'args': args
             }, PATH + "-final.ckpt")
     print("Model Saved\n")
