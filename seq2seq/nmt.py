@@ -12,7 +12,7 @@ from torchtext.datasets import Multi30k
 # utils
 import random, time, spacy, os
 from argparse import ArgumentParser
-from tqdm import tqdm
+
 
 from beam_search import *
 from bleu import *
@@ -142,7 +142,7 @@ def train(model, iterator, optimizer, criterion):
     model.train()
     epoch_loss = 0
     clip = 1
-    for i, batch in tqdm(enumerate(iterator), desc="a epoch (# batches)"):
+    for i, batch in enumerate(iterator), desc="a epoch (# batches)":
         optimizer.zero_grad()
 
         src = batch.src
@@ -274,15 +274,15 @@ if __name__ == "__main__":
 
     loss = 0
     best_eval_score = -float("inf")
-    for epoch in tqdm(range(epochs), desc="Total train (# epochs)"):
+    for epoch in range(epochs), desc="Total train (# epochs)":
         tt1 = tt()
         train_loss = train(model, train_iterator, optimizer, criterion)
         tt2 = tt()
-        print("Train time per epoch: {:.3f}".format(tt2-tt1))
+        print("[{}/{}]Train time per epoch: {:.3f}".format(epoch, epochs, tt2-tt1))
         eval_score = evaluate(model, valid_iterator, criterion)
         tt3 = tt()
-        print("Eval time per epoch: {:.3f}".format(tt3-tt2))
-        print("Train loss: {:.4f}, BLEU score: {:.4f}\n".format(train_loss, eval_score))
+        print("[{}/{}]Eval time per epoch: {:.3f}".format(epoch, epochs, tt3-tt2))
+        print("[{}/{}]Train loss: {:.4f}, BLEU score: {:.4f}\n".format(epoch, epochs, train_loss, eval_score))
         if eval_score >= best_eval_score:
             torch.save({
                     'epoch': epoch,
