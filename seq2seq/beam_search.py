@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from queue import PriorityQueue
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 SOS_token = 2
 EOS_token = 3
 MAX_LENGTH = 20
@@ -54,8 +53,10 @@ def beam_decode(decoder, target_tensor, decoder_hiddens, beam_width=2, n_sen=1):
                 decoder_hidden = decoder_hiddens[:, idx, :]
 
         # Start with the start of the sentence token
-        decoder_input = torch.LongTensor([SOS_token], device=device)
-
+        if device == torch.device("cuda"):
+            decoder_input = torch.cuda.LongTensor([[SOS_token]])
+        else:
+            decoder_input = torch.LongTensor([[SOS_token]])
         # Number of sentence to generate
         endnodes = []
         number_required = min((topk + 1), topk - len(endnodes))
@@ -87,7 +88,7 @@ def beam_decode(decoder, target_tensor, decoder_hiddens, beam_width=2, n_sen=1):
                     continue
 
             # decode for one step using decoder
-            decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
+            decoder_output, decoder_hidden = decoder(decoder_input.squeeze(0), (decoder_hidden[0].unseqeeze(1), decoder_hidden[1].unseqeeze(1)) if isinstance(decoder_hiddens, tuple) else decoder_hidden.unseqeeze(1))
 
             # PUT HERE REAL BEAM SEARCH OF TOP
             log_prob, indexes = torch.topk(decoder_output, beam_width)

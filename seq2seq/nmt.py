@@ -72,7 +72,7 @@ class Decoder(nn.Module):
             self.rnn = nn.LSTM(emd_dim, hidden_dim, num_layers, bidirectional=bidirectional)
         else:
             self.rnn = nn.GRU(emd_dim, hidden_dim, num_layers, bidirectional=bidirectional)
-        self.fc = nn.Linear(emd_dim, output_dim)
+        self.fc = nn.Linear(hidden_dim * self.num_directions, output_dim)
         self.log_softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input, hidden):
@@ -82,10 +82,15 @@ class Decoder(nn.Module):
         output1: (batch of) translated words. size: [batch_size, output_dim]
         output2: same type of input2
         """
-        output = self.emb(input.unsqueeze(0))
+        # print("Input shape: {}\n".format(input.shape))
+        output = self.emb(input).unsqueeze(0)
         output = self.dropout(output)
+        # print("Embeded shape: {}\n".format(output.shape))
+        # print("Hidden shape: {}\n".format(" and ".join([ str(x.shape) for x in hidden])))
         # output = F.relu(output)
         output, hidden = self.rnn(output, hidden)
+        # print("After RNN shape: {}\n".format(output.shape))
+        # output: [1, batch_size, hidden_dim]
         output = self.log_softmax(self.fc(output.squeeze(0)))
         return output, hidden
 
@@ -159,7 +164,7 @@ def evaluate(model, iterator, criterion):
             src = batch.src
             trg = batch.trg
 
-            output = model(src, trg) #turn off teacher forcing
+            output = model(src, trg)
 
             trg = trg[1:].view(-1)
             output = output[1:].view(-1, output.shape[-1])
@@ -174,23 +179,24 @@ if __name__ == "__main__":
     parser.add_argument('-seed', type=int, default=9)
     parser.add_argument('-b', "--batch_size", type=int, default=128, help='batch size(default=128)')
     parser.add_argument('-num-layers', type=int, default=4)
-    parser.add_argument('-emd-dim', type=int, default=1000)
-    parser.add_argument('-hidden-dim', type=int, default=1000)
+    parser.add_argument('-emd-dim', type=int, default=256)
+    parser.add_argument('-hidden-dim', type=int, default=512)
     parser.add_argument('--no-reverse', help='not to reverse input seq', action='store_true')
     parser.add_argument('--bidirectional', help='bidirectional rnn', action='store_true')
     parser.add_argument('-lr', type=float, default=1e-3)
     parser.add_argument('-rnn-type', choices=['LSTM', 'GRU'], default="LSTM", help="LSTM or GRU")
     parser.add_argument('-opt', choices=['adam', 'sgd'], default='sgd')
     parser.add_argument('-epochs', type=int, default=10)
-    parser.add_argument('--cpu', help='forcing to use cpu', action='store_true')
+    # parser.add_argument('--cpu', help='forcing to use cpu', action='store_true')
     parser.add_argument('-dropout', type=float, help='dropout rate', default=0.5)
     parser.add_argument('-resume', type=str, help='load model from checkpoint(input: path of ckpt)')
 
     global args
     args = parser.parse_args()
 
-    global device
-    device = torch.device("cuda" if torch.cuda.is_available() and not args.cpu else "cpu")
+    # global device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Using Device: {}".format(device))
     # Random Seed
     random_seed = args.seed
     random.seed(random_seed)
@@ -255,7 +261,7 @@ if __name__ == "__main__":
 
     # Training
     # @TODO: Existing Model load
-    print("Model Training Starts\n")
+    print("Model Training Start\n")
     t1 = tt()
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=1e-3) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=1e-3)
