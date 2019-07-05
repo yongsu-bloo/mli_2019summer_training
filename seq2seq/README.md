@@ -91,11 +91,24 @@ optional arguments:
 ```
 [Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Target Sentence]
 ```
+
 ### Sample Result
-##### Translation
+Test BLEU score: 40.16
+#### Translation
 
-##### Loss and BLEU score
+| Target Sentence  | Hypothesis |
+| ------------- | ------------- |
+| a man in a black jacket and checkered hat wearing black and white striped pants plays an electric guitar on a stage with a singer and another guitar player in the background .  | a man in a black hat and plaid jacket stands on a stage with a guitar in the background , a man in a yellow shirt and hat on a stage . |
+| a woman with a push - to - talk cellphone and headset waiting at a crosswalk .  | a woman with a special belt and a bikini piercing is buying a sign .  |
+| small orchestra playing with open violin case in front   | small puppies plays with a toy in the ground .  |
 
+[Multi Hypothesis Example](sample_results.txt)
+
+#### Plot
+![Train Plot](plots/gru-final_train.png "Train Plot")
+
+
+![Validation Plot](plots/gru-final_eval.png "Validation Plot")
 
 ### Implementation Reference
 - [CS224n Lecture 8](http://web.stanford.edu/class/cs224n/)
