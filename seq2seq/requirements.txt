@@ -20,3 +20,4 @@ jupyter
 
 # utils
 #tqdm
+dataclasses

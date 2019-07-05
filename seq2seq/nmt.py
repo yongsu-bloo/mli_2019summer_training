@@ -315,7 +315,10 @@ if __name__ == "__main__":
     model = DDP(model, delay_allreduce=True)  # multi gpu
 
     optimizer = optim.SGD(model.parameters(), lr=lr) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'], device=device)
+    if str(device) == 'cuda':
+        criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>']).cuda()
+    else:
+        criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
     # Training
     if do_train:
         load_epoch = 0
@@ -376,10 +379,8 @@ if __name__ == "__main__":
     # Evaluation - Test Dataset
     print("Model Evaluation on Test Dataset")
     et1 = tt()
-    if args.resume:
+    if args.evaluate and args.resume:
         checkpoint = torch.load(args.resume)
-        epoch = checkpoint['epoch']
-        losses = checkpoint['losses']
         load_args = checkpoint['args']
 
         model = Seq2Seq(encoder, decoder).to(device)
