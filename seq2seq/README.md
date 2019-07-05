@@ -12,12 +12,56 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
 }
 ```
 ### Requirements
+***! Use python3, pip3 instead depending on your system***
+##### Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+##### Datasets
+
 ```bash
 python -m spacy download en
 python -m spacy download de
 ```
 ### Usage
-@TODO
+##### Train and Evaluation
+```bash
+python nmt [options]
+```
+##### Option Description
+```
+usage: nmt.py [-h] [-seed SEED] [-b BATCH_SIZE] [-num-layers NUM_LAYERS]
+              [-emd-dim EMD_DIM] [-hidden-dim HIDDEN_DIM] [--no-reverse]
+              [--bidirectional] [-lr LR] [-rnn-type {LSTM,GRU}]
+              [-opt {adam,sgd}] [-epochs EPOCHS] [-dropout DROPOUT] [--cpu]
+              [-resume RESUME] [--evaluate] [-v VERBOSE]
+              [--local_rank LOCAL_RANK] [--no-multi]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -seed SEED
+  -b BATCH_SIZE, --batch_size BATCH_SIZE
+                        batch size(default=128)
+  -num-layers NUM_LAYERS
+  -emd-dim EMD_DIM
+  -hidden-dim HIDDEN_DIM
+  --no-reverse          not to reverse input seq
+  --bidirectional       bidirectional rnn
+  -lr LR
+  -rnn-type {LSTM,GRU}  LSTM or GRU
+  -opt {adam,sgd}
+  -epochs EPOCHS
+  -dropout DROPOUT      dropout rate
+  --cpu                 forcing to use cpu
+  -resume RESUME        load model from checkpoint(input: path of ckpt)
+  --evaluate            Not train, Only evaluate
+  -v VERBOSE, --verbose VERBOSE
+                        0: nothing, 1: test only, else: eval and test
+  --local_rank LOCAL_RANK
+  --no-multi            use single gpu
+```
 
 ### Outline
 

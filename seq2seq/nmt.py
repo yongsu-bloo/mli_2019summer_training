@@ -13,6 +13,11 @@ from nltk.translate.bleu_score import sentence_bleu,SmoothingFunction
 # utils
 import random, time, spacy, os
 from argparse import ArgumentParser
+# multi gpu
+try:
+    from apex.parallel import DistributedDataParallel as DDP
+except ImportError:
+    print("Multi GPU is not available\nPlease install apex from https://www.github.com/nvidia/apex")
 # from other codes
 from beam_search import *
 ### Utils
@@ -192,7 +197,7 @@ def evaluate(model, iterator, vocab, print_eg=False):
                 print("Hypothesis sentences: \"{}\"\n".format("\" , \"".join([ " ".join(sen) for sen in output[0]])))
 
             for output_sens, trg_sen in zip(output, trg):
-                bleu_score += sentence_bleu(output_sens, trg_sen, smoothing_function=sf.method9)
+                bleu_score += sentence_bleu(output_sens, trg_sen, smoothing_function=sf.method7)
                 num_sen += 1
 
     return bleu_score * 100 / num_sen
@@ -215,9 +220,27 @@ if __name__ == "__main__":
     parser.add_argument('-resume', type=str, help='load model from checkpoint(input: path of ckpt)')
     parser.add_argument('--evaluate', help='Not train, Only evaluate', action='store_true')
     parser.add_argument('-v', '--verbose', help="0: nothing, 1: test only, else: eval and test", type=int, default=1)
-
+    # multi gpu setting
+    parser.add_argument("--local_rank", default=0, type=int)
+    parser.add_argument("--no-multi", help="use single gpu", action="store_true")
     global args
     args = parser.parse_args()
+    # multi gpu
+    args.distributed = False
+    if not args.no_multi and 'WORLD_SIZE' in os.environ:
+        args.distributed = int(os.environ['WORLD_SIZE']) > 1
+
+    args.gpu = 0
+    args.world_size = 1
+
+    if args.distributed:
+        args.gpu = args.local_rank
+        torch.cuda.set_device(args.gpu)
+        torch.distributed.init_process_group(backend='nccl',
+                                             init_method='env://')
+        args.world_size = torch.distributed.get_world_size()
+
+        assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # global device
     do_train = not args.evaluate
@@ -245,6 +268,8 @@ if __name__ == "__main__":
 
     params = [batch_size, rnn_type, reverse, bidirectional, num_layers, emd_dim, hidden_dim,
                 lr]
+    if args.distributed:
+        params.append("MultiGPU")
     PATH = os.path.join("models", "seq2seq-{}".format("-".join([ str(p) for p in params ])))
     # Preparing data
     t1 = tt()
@@ -286,9 +311,11 @@ if __name__ == "__main__":
                         num_layers=num_layers, rnn_type=rnn_type, bidirectional=bidirectional).to(device)
     model = Seq2Seq(encoder, decoder).to(device)
     model.apply(init_weights) # weight initialization
+    # parallel
+    model = DDP(model, delay_allreduce=True)  # multi gpu
 
     optimizer = optim.SGD(model.parameters(), lr=lr) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
+    criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'], device=device)
     # Training
     if do_train:
         load_epoch = 0
@@ -304,6 +331,8 @@ if __name__ == "__main__":
             load_args = checkpoint['args']
 
             model = Seq2Seq(encoder, decoder).to(device)
+            if args.distributed:
+                model = DDP(model, delay_allreduce=True)  # multi gpu
             optimizer = optim.SGD(model.parameters(), lr=load_args.lr) if load_args.opt == "sgd" else optim.Adam(model.parameters(), lr=load_args.lr)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -345,7 +374,6 @@ if __name__ == "__main__":
                 }, PATH + "-final.ckpt")
         print("Model Saved\n")
     # Evaluation - Test Dataset
-    # @TODO load existing model
     print("Model Evaluation on Test Dataset")
     et1 = tt()
     if args.resume:
@@ -355,6 +383,8 @@ if __name__ == "__main__":
         load_args = checkpoint['args']
 
         model = Seq2Seq(encoder, decoder).to(device)
+        if args.distributed:
+            model = DDP(model, delay_allreduce=True) # multi gpu
         optimizer = optim.SGD(model.parameters(), lr=load_args.lr) if load_args.opt == "sgd" else optim.Adam(model.parameters(), lr=load_args.lr)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
