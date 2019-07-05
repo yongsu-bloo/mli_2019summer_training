@@ -160,28 +160,29 @@ def beam_decode(decoder, target_tensor, decoder_hiddens, beam_width=2, n_sen=1):
         if len(endnodes) == 0:
             endnodes = [nodes.get() for _ in range(topk)]
 
-        # utterances = []
-        # for score, _, n in sorted(endnodes, key=operator.itemgetter(0)):
-        #     utterance = []
-        #     utterance.append(n.wordid.item())
-        #     # back trace
-        #     while n.prevNode != None:
-        #         n = n.prevNode
-        #         utterance.append(n.wordid.item())
-        #
-        #     utterance = utterance[::-1]
-        #     utterances.append(utterance[:max_length])
-        #
-        # decoded_batch.append(utterances)
-
-        # use the best one
-        score, _, n = sorted(endnodes, key=operator.itemgetter(0))[0]
-        utterance = []
-        utterance.append(n.wordid.item())
-        # back trace
-        while n.prevNode != None:
-            n = n.prevNode
+        utterances = []
+        for score, _, n in sorted(endnodes, key=operator.itemgetter(0)):
+            utterance = []
             utterance.append(n.wordid.item())
-        utterance = utterance[::-1]
-        decoded_batch.append(utterance[:max_length])
-    return decoded_batch # python list of sentence(list of str)
+            # back trace
+            while n.prevNode != None:
+                n = n.prevNode
+                utterance.append(n.wordid.item())
+
+            utterance = utterance[::-1]
+            utterances.append(utterance[:max_length])
+
+        decoded_batch.append(utterances) # -> list(list(list(str)))
+
+        # # use the best one
+        # score, _, n = sorted(endnodes, key=operator.itemgetter(0))[0]
+        # utterance = []
+        # utterance.append(n.wordid.item())
+        # # back trace
+        # while n.prevNode != None:
+        #     n = n.prevNode
+        #     utterance.append(n.wordid.item())
+        # utterance = utterance[::-1]
+        # decoded_batch.append(utterance[:max_length])
+        # -> python list of sentence(list of str)
+    return decoded_batch
