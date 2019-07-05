@@ -91,6 +91,10 @@ optional arguments:
 ```
 [Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Target Sentence]
 ```
+### Sample Result
+##### Translation
+
+##### Loss and BLEU score
 
 
 ### Implementation Reference

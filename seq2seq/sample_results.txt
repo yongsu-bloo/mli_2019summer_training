@@ -1,0 +1,10 @@
+BLEU score: 40.16
+
+Target sentence: "a man in a black jacket and checkered hat wearing black and white striped pants plays an electric guitar on a stage with a singer and another guitar player in the background ."
+Hypothesis sentences: "a man in a black hat and plaid jacket stands on a stage with a guitar in the background , a man in a yellow shirt and hat on a stage ." , "a man in a black hat and plaid jacket stands on a stage with a guitar in the background , a man in a yellow shirt and hat on a stage ."
+
+Target sentence: "a woman with a push - to - talk cellphone and headset waiting at a crosswalk ."
+Hypothesis sentences: "a woman with a special belt and a bikini piercing is buying a sign ." , "a woman with a special belt and a bikini piercing is buying a piano ."
+
+Target sentence: "small orchestra playing with open violin case in front"
+Hypothesis sentences: "small puppies plays with a toy in the ground ." , "small puppies plays with a piano on the ground ."

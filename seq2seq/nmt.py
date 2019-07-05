@@ -353,6 +353,7 @@ if __name__ == "__main__":
             print("[{}/{}]Train time per epoch: {:.3f}".format(epoch+1, epochs, tt2-tt1))
             train_losses.append(train_loss)
             eval_score = evaluate(model, valid_iterator, target_field.vocab, args.verbose > 1)
+            eval_scores.append(eval_score)
             tt3 = tt()
             print("[{}/{}]Eval time per epoch: {:.3f}".format(epoch+1, epochs, tt3-tt2))
             print("[{}/{}]Train loss: {:.4f}, BLEU score: {:.4f}\n".format(epoch+1, epochs, train_loss, eval_score))
@@ -400,36 +401,6 @@ if __name__ == "__main__":
     print("Evaluation Time: {:.4f} sec".format(et2-et1))
 
     # plot and save plots
-    spec = {"NUM_LAYERS": args.num_layers,
-            "EMD_DIM": args.emd_dim,
-            "HIDDEN_DIM": args.hidden_dim,
-            "Dropout": args.dropout,
-            "Optimizer": args.opt
-            }
-    if args.bidirectional:
-        spec["Bidirectional"] = ""
-    if args.no_reverse:
-        spec["Not reversed"] = ""
-    spec = ", ".join([ "{}: {}".format(k, spec[k]) if spec[k] != "" else str(k) for k in spec])
-    # train loss
-    fig, ax = plt.subplots(figsize=(9,5.5))
-    ax.plot(losses)
-    ax.set_title('Train Loss')
-    ax.set_xlabel('Loss')
-    ax.set_ylabel('# epochs')
-    ax.legend()
-    fig.text(.5, .05, spec, ha='center')
-    plt.show()
-    plt.tight_layout()
-    fig.savefig('f{save_path}_train.{file_type}', format=file_type)
-    # test bleu
-    fig2, ax2 = plt.subplots(figsize=(9,5.5))
-    ax2.plot(scores)
-    ax2.set_title('Validation BLEU')
-    ax2.set_xlabel('BLEU')
-    ax2.set_ylabel('# epochs')
-    ax2.legend()
-    fig2.text(.5, .05, spec, ha='center')
-    plt.show()
-    plt.tight_layout()
-    fig2.savefig('f{save_path}_eval.{file_type}', format=file_type)
+    save_path = model_name
+    file_type = "pdf"
+    plot_and_save(PATH + "-final.ckpt", save_path, file_type)
