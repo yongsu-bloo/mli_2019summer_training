@@ -266,14 +266,14 @@ if __name__ == "__main__":
     model = Seq2Seq(encoder, decoder).to(device)
     model.apply(init_weights) # weight initialization
 
+    optimizer = optim.SGD(model.parameters(), lr=lr) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=lr)
+    criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
     # Training
     if do_train:
     # @TODO: Existing Model load
     print("Model Training Start\n")
     t1 = tt()
     model.train()
-    optimizer = optim.SGD(model.parameters(), lr=1e-3) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=1e-3)
-    criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
         train_losses = []
         best_eval_score = -float("inf")
         for epoch in range(epochs):
@@ -309,6 +309,17 @@ if __name__ == "__main__":
         print("Model Saved\n")
     # Evaluation - Test Dataset
     # @TODO load existing model
-    model.eval()
-    test_score = evaluate(model, test_iterator)
-    if args.resume
+    if args.resume:
+        checkpoint = torch.load(args.resume)
+        epoch = checkpoint['epoch']
+        losses = checkpoint['losses']
+        load_args = checkpoint['args']
+        model = Seq2Seq(encoder, decoder).to(device)
+        optimizer = optim.SGD(model.parameters(), lr=load_args.lr) if load_args.opt == "sgd" else optim.Adam(model.parameters(), lr=load_args.lr)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        model.eval()
+
+
+        test_score = evaluate(model, test_iterator)
