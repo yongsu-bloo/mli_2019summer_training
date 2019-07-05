@@ -16,8 +16,8 @@ scikit-learn
 
 # visualization
 matplotlib
-#ipython
-#jupyter
+ipython
+jupyter
 
 # utils
-tqdm
+#tqdm

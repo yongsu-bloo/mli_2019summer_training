@@ -176,6 +176,7 @@ def evaluate(model, iterator):
             output = model(src, trg)
             trg = trg.transpose(0,1)
             output = output.transpose(0,1)
+
             bleu_score += get_bleu(output, trg)
     return bleu_score
 
@@ -192,8 +193,8 @@ if __name__ == "__main__":
     parser.add_argument('-rnn-type', choices=['LSTM', 'GRU'], default="LSTM", help="LSTM or GRU")
     parser.add_argument('-opt', choices=['adam', 'sgd'], default='sgd')
     parser.add_argument('-epochs', type=int, default=10)
-    # parser.add_argument('--cpu', help='forcing to use cpu', action='store_true')
     parser.add_argument('-dropout', type=float, help='dropout rate', default=0.5)
+    parser.add_argument('--cpu', help='forcing to use cpu', action='store_true')
     parser.add_argument('-resume', type=str, help='load model from checkpoint(input: path of ckpt)')
     parser.add_argument('--evaluate', help='Not train, Only evaluate', action='store_true')
 
@@ -201,8 +202,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # global device
-    train_only = not args.evaluate
+    do_train = not args.evaluate
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.cpu:
+        device = torch.device("cpu")
     print("Using Device: {}".format(device))
     # Random Seed
     random_seed = args.seed
@@ -271,9 +274,19 @@ if __name__ == "__main__":
     # Training
     if do_train:
     # @TODO: Existing Model load
-    print("Model Training Start\n")
-    t1 = tt()
-    model.train()
+        if args.resume:
+            checkpoint = torch.load(args.resume)
+            epoch = checkpoint['epoch']
+            losses = checkpoint['losses']
+            load_args = checkpoint['args']
+
+            model = Seq2Seq(encoder, decoder).to(device)
+            optimizer = optim.SGD(model.parameters(), lr=load_args.lr) if load_args.opt == "sgd" else optim.Adam(model.parameters(), lr=load_args.lr)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        model.train()
+        print("Model Training Start\n")
+        t1 = tt()
         train_losses = []
         best_eval_score = -float("inf")
         for epoch in range(epochs):
@@ -309,17 +322,21 @@ if __name__ == "__main__":
         print("Model Saved\n")
     # Evaluation - Test Dataset
     # @TODO load existing model
+    print("Model Evaluation on Test Dataset")
+    et1 = tt()
     if args.resume:
         checkpoint = torch.load(args.resume)
         epoch = checkpoint['epoch']
         losses = checkpoint['losses']
         load_args = checkpoint['args']
+
         model = Seq2Seq(encoder, decoder).to(device)
         optimizer = optim.SGD(model.parameters(), lr=load_args.lr) if load_args.opt == "sgd" else optim.Adam(model.parameters(), lr=load_args.lr)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-        model.eval()
-
-
-        test_score = evaluate(model, test_iterator)
+    model.eval()
+    test_score = evaluate(model, test_iterator)
+    print("Test BLEU score: {:.2f}".format(test_score))
+    et2 = tt()
+    print("Evaluation Time: {:.4f} sec".format(et2-et1))
