@@ -8,7 +8,7 @@ def plot_and_save(load_path, save_path, file_type, checkpoint=None):
     losses = checkpoint['losses']
     scores = checkpoint['scores']
     load_args = checkpoint['args']
-    scores = [29.5180, 35.1436 , 36.3166, 36.7998, 38.1695, 38.1610, 38.8785, 39.3129, 39.0157, 39.2539]
+
     spec = {"NUM_LAYERS": load_args.num_layers,
             "EMD_DIM": load_args.emd_dim,
             "HIDDEN_DIM": load_args.hidden_dim,

@@ -21,6 +21,7 @@ except ImportError:
     print("Multi GPU is not available\nPlease install apex from https://www.github.com/nvidia/apex")
 # from other codes
 from beam_search import *
+from plot import plot_and_save
 ### Utils
 tt = time.time
 def tokenize(text):
@@ -181,6 +182,7 @@ def evaluate(model, iterator, vocab, print_eg=False):
     bleu_score = 0.
     num_sen = 0
     sf = SmoothingFunction()
+    f = open("test_results.txt", "w")
     with torch.no_grad():
         for i, batch in enumerate(iterator):
 
@@ -196,11 +198,14 @@ def evaluate(model, iterator, vocab, print_eg=False):
             if print_eg:
                 print("Target sentence: \"{}\"".format(" ".join(trg[0])))
                 print("Hypothesis sentences: \"{}\"\n".format("\" , \"".join([ " ".join(sen) for sen in output[0]])))
+                for idx in range(len(trg)):
+                    f.write("Target sentence: \"{}\"\n".format(" ".join(trg[idx])))
+                    f.write("Hypothesis sentences: \"{}\"\n\n".format("\" , \"".join([ " ".join(sen) for sen in output[idx]])))
 
             for output_sens, trg_sen in zip(output, trg):
                 bleu_score += sentence_bleu(output_sens, trg_sen, smoothing_function=sf.method7)
                 num_sen += 1
-
+    f.close()
     return bleu_score * 100 / num_sen
 
 if __name__ == "__main__":
@@ -244,7 +249,6 @@ if __name__ == "__main__":
         assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # global device
-    do_train = not args.evaluate
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.cpu:
         device = torch.device("cpu")
@@ -273,6 +277,8 @@ if __name__ == "__main__":
         params.append("MultiGPU")
     model_name = "seq2seq-{}".format("-".join([ str(p) for p in params ]))
     PATH = os.path.join("models", model_name)
+
+    do_train = not args.evaluate
     # Preparing data
     t1 = tt()
     spacy_de = spacy.load('de')
