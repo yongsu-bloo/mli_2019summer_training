@@ -13,6 +13,7 @@ from nltk.translate.bleu_score import sentence_bleu,SmoothingFunction
 # utils
 import random, time, spacy, os
 from argparse import ArgumentParser
+import matplotlib.pyplot as plt
 # multi gpu
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -270,7 +271,8 @@ if __name__ == "__main__":
                 lr]
     if args.distributed:
         params.append("MultiGPU")
-    PATH = os.path.join("models", "seq2seq-{}".format("-".join([ str(p) for p in params ])))
+    model_name = "seq2seq-{}".format("-".join([ str(p) for p in params ]))
+    PATH = os.path.join("models", model_name)
     # Preparing data
     t1 = tt()
     spacy_de = spacy.load('de')
@@ -312,7 +314,8 @@ if __name__ == "__main__":
     model = Seq2Seq(encoder, decoder).to(device)
     model.apply(init_weights) # weight initialization
     # parallel
-    model = DDP(model, delay_allreduce=True)  # multi gpu
+    if args.distributed:
+        model = DDP(model, delay_allreduce=True)  # multi gpu
 
     optimizer = optim.SGD(model.parameters(), lr=lr) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=lr)
     if str(device) == 'cuda':
@@ -395,3 +398,38 @@ if __name__ == "__main__":
     print("Test BLEU score: {:.2f}".format(test_score))
     et2 = tt()
     print("Evaluation Time: {:.4f} sec".format(et2-et1))
+
+    # plot and save plots
+    spec = {"NUM_LAYERS": args.num_layers,
+            "EMD_DIM": args.emd_dim,
+            "HIDDEN_DIM": args.hidden_dim,
+            "Dropout": args.dropout,
+            "Optimizer": args.opt
+            }
+    if args.bidirectional:
+        spec["Bidirectional"] = ""
+    if args.no_reverse:
+        spec["Not reversed"] = ""
+    spec = ", ".join([ "{}: {}".format(k, spec[k]) if spec[k] != "" else str(k) for k in spec])
+    # train loss
+    fig, ax = plt.subplots(figsize=(9,5.5))
+    ax.plot(losses)
+    ax.set_title('Train Loss')
+    ax.set_xlabel('Loss')
+    ax.set_ylabel('# epochs')
+    ax.legend()
+    fig.text(.5, .05, spec, ha='center')
+    plt.show()
+    plt.tight_layout()
+    fig.savefig('{save_path}_train.{file_type}', format=file_type)
+    # test bleu
+    fig2, ax2 = plt.subplots(figsize=(9,5.5))
+    ax2.plot(scores)
+    ax2.set_title('Validation BLEU')
+    ax2.set_xlabel('BLEU')
+    ax2.set_ylabel('# epochs')
+    ax2.legend()
+    fig2.text(.5, .05, spec, ha='center')
+    plt.show()
+    plt.tight_layout()
+    fig2.savefig('{save_path}_eval.{file_type}', format=file_type)

@@ -28,9 +28,9 @@ python -m spacy download de
 ### Usage
 ##### Train and Evaluation
 ```bash
-python nmt [options]
+python nmt.py [options]
 ```
-##### Option Description
+##### Option Description for nmt.py
 ```
 usage: nmt.py [-h] [-seed SEED] [-b BATCH_SIZE] [-num-layers NUM_LAYERS]
               [-emd-dim EMD_DIM] [-hidden-dim HIDDEN_DIM] [--no-reverse]
@@ -62,9 +62,23 @@ optional arguments:
   --local_rank LOCAL_RANK
   --no-multi            use single gpu
 ```
+##### Plot Result
+```bash
+python plot.py [options]
+```
+##### Option Description for plot.py
 
 ### Outline
+```
+usage: plot.py [-h] [-load-path LOAD_PATH] [-save-path SAVE_PATH]
+               [-file-type FILE_TYPE]
 
+optional arguments:
+  -h, --help            show this help message and exit
+  -load-path LOAD_PATH  ckpt path
+  -save-path SAVE_PATH  save model path
+  -file-type FILE_TYPE  png, pdf, svg, ...
+```
 [**Task**] Translation: German -> English
 
 [**Process**]
