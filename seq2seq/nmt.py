@@ -421,7 +421,7 @@ if __name__ == "__main__":
     fig.text(.5, .05, spec, ha='center')
     plt.show()
     plt.tight_layout()
-    fig.savefig('{save_path}_train.{file_type}', format=file_type)
+    fig.savefig('f{save_path}_train.{file_type}', format=file_type)
     # test bleu
     fig2, ax2 = plt.subplots(figsize=(9,5.5))
     ax2.plot(scores)
@@ -432,4 +432,4 @@ if __name__ == "__main__":
     fig2.text(.5, .05, spec, ha='center')
     plt.show()
     plt.tight_layout()
-    fig2.savefig('{save_path}_eval.{file_type}', format=file_type)
+    fig2.savefig('f{save_path}_eval.{file_type}', format=file_type)
