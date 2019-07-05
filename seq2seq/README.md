@@ -92,7 +92,6 @@ optional arguments:
 [Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Target Sentence]
 ```
 
-3.
 
 ### Implementation Reference
 - [CS224n Lecture 8](http://web.stanford.edu/class/cs224n/)
