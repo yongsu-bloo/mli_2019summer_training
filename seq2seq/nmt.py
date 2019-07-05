@@ -163,7 +163,7 @@ def train(model, iterator, optimizer, criterion):
         # break # for debugging
     return epoch_loss / len(iterator)
 
-def evaluate(model, iterator, criterion):
+def evaluate(model, iterator):
     #@TODO bleu score
     model.eval()
     bleu_score = 0
@@ -195,11 +195,13 @@ if __name__ == "__main__":
     # parser.add_argument('--cpu', help='forcing to use cpu', action='store_true')
     parser.add_argument('-dropout', type=float, help='dropout rate', default=0.5)
     parser.add_argument('-resume', type=str, help='load model from checkpoint(input: path of ckpt)')
+    parser.add_argument('--evaluate', help='Not train, Only evaluate', action='store_true')
 
     global args
     args = parser.parse_args()
 
     # global device
+    train_only = not args.evaluate
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using Device: {}".format(device))
     # Random Seed
@@ -265,48 +267,48 @@ if __name__ == "__main__":
     model.apply(init_weights) # weight initialization
 
     # Training
+    if do_train:
     # @TODO: Existing Model load
     print("Model Training Start\n")
     t1 = tt()
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=1e-3) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>'])
-
-    train_losses = []
-
-    best_eval_score = -float("inf")
-    for epoch in range(epochs):
-        tt1 = tt()
-        train_loss = train(model, train_iterator, optimizer, criterion)
-        tt2 = tt()
-        print("[{}/{}]Train time per epoch: {:.3f}".format(epoch, epochs, tt2-tt1))
-        train_losses.append(train_loss)
-
-        eval_score = evaluate(model, valid_iterator, criterion)
-        tt3 = tt()
-        print("[{}/{}]Eval time per epoch: {:.3f}".format(epoch, epochs, tt3-tt2))
-        print("[{}/{}]Train loss: {:.4f}, BLEU score: {:.4f}\n".format(epoch, epochs, train_loss, eval_score))
-        if eval_score >= best_eval_score:
-            torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'losses': train_losses,
-                    'args': args
-                    }, PATH + "-{}.ckpt".format(epoch))
-            best_eval_score = eval_score
-            print("Best Model Updated\n")
-        # break # for debugging
-    t2 = tt()
-    print("Model Training ends ({:.3f} min)\n".format((t2-t1) / 60))
-    torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'losses': train_losses,
-            'args': args
-            }, PATH + "-final.ckpt")
-    print("Model Saved\n")
-    # Evaluation
+        train_losses = []
+        best_eval_score = -float("inf")
+        for epoch in range(epochs):
+            tt1 = tt()
+            train_loss = train(model, train_iterator, optimizer, criterion)
+            tt2 = tt()
+            print("[{}/{}]Train time per epoch: {:.3f}".format(epoch, epochs, tt2-tt1))
+            train_losses.append(train_loss)
+            eval_score = evaluate(model, valid_iterator)
+            tt3 = tt()
+            print("[{}/{}]Eval time per epoch: {:.3f}".format(epoch, epochs, tt3-tt2))
+            print("[{}/{}]Train loss: {:.4f}, BLEU score: {:.4f}\n".format(epoch, epochs, train_loss, eval_score))
+            if eval_score >= best_eval_score:
+                torch.save({
+                        'epoch': epoch,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'losses': train_losses,
+                        'args': args
+                        }, PATH + "-{}.ckpt".format(epoch))
+                best_eval_score = eval_score
+                print("Best Model Updated\n")
+            # break # for debugging
+        t2 = tt()
+        print("Model Training ends ({:.3f} min)\n".format((t2-t1) / 60))
+        torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'losses': train_losses,
+                'args': args
+                }, PATH + "-final.ckpt")
+        print("Model Saved\n")
+    # Evaluation - Test Dataset
     # @TODO load existing model
     model.eval()
+    test_score = evaluate(model, test_iterator)
+    if args.resume
