@@ -38,9 +38,9 @@ def detokenize(index, vocab):
     return vocab.itos[index]
 def lr_scheduler(epoch):
     if epoch <= 5:
-        return epoch
+        return args.lr
     else:
-        return epoch * (0.5 ** (epoch-5))
+        return args.lr * (0.5 ** (epoch-5))
 
 ### Seq2Seq Model
 class Encoder(nn.Module):
@@ -157,7 +157,7 @@ class Seq2Seq(nn.Module):
 def train(model, iterator, optimizer, criterion):
     model.train()
     epoch_loss = 0
-    clip = 1 if args.lr < 0.1 else 5
+    clip = 1
     for i, batch in enumerate(iterator):
         optimizer.zero_grad()
 
@@ -279,15 +279,19 @@ if __name__ == "__main__":
     hidden_dim = args.hidden_dim
     lr = args.lr
     decay = args.decay
+    do_train = not args.evaluate
+
+    print("Options: {}\n".format(args))
 
     params = [batch_size, rnn_type, reverse, bidirectional, num_layers, emd_dim, hidden_dim,
                 lr, decay]
     if args.distributed:
         params.append("MultiGPU")
+
     model_name = "seq2seq-{}".format("-".join([ str(p) for p in params ]))
     PATH = os.path.join("models", model_name)
 
-    do_train = not args.evaluate
+
     # Preparing data
     t1 = tt()
     spacy_de = spacy.load('de')
