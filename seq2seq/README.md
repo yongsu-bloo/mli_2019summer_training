@@ -36,7 +36,7 @@ usage: nmt.py [-h] [-seed SEED] [-b BATCH_SIZE] [-num-layers NUM_LAYERS]
               [-emd-dim EMD_DIM] [-hidden-dim HIDDEN_DIM] [--no-reverse]
               [--bidirectional] [-lr LR] [-rnn-type {LSTM,GRU}]
               [-opt {adam,sgd}] [-epochs EPOCHS] [-dropout DROPOUT] [--cpu]
-              [-resume RESUME] [--evaluate] [-v VERBOSE]
+              [-resume RESUME] [--evaluate] [-v VERBOSE] [--decay]
               [--local_rank LOCAL_RANK] [--no-multi]
 
 optional arguments:
@@ -59,6 +59,7 @@ optional arguments:
   --evaluate            Not train, Only evaluate
   -v VERBOSE, --verbose VERBOSE
                         0: nothing, 1: test only, else: eval and test
+  --decay               Halving lr for each epoch after 5th epoch
   --local_rank LOCAL_RANK
   --no-multi            use single gpu
 ```
@@ -89,7 +90,11 @@ optional arguments:
 
 2. Model
 ```
-[Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Target Sentence]
+[Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Translated Sentence]
+```
+3. Evaluation
+```
+(Model: Seq2Seq) -> [Hypothesis] -> (Compare with Target Sentence) -> [BLEU score]
 ```
 
 ### Sample Result
@@ -113,6 +118,7 @@ Test BLEU score: 40.16
 
 ### Implementation Reference
 - [CS224n Lecture 8](http://web.stanford.edu/class/cs224n/)
+- [Seq2Seq Pytorch Tutorial](https://github.com/bentrevett/pytorch-seq2seq/blob/master/1%20-%20Sequence%20to%20Sequence%20Learning%20with%20Neural%20Networks.ipynb)
 - [TorchText Docs](https://torchtext.readthedocs.io/en/latest/)
 - [TorchText Tutorial (블로그)](https://simonjisu.github.io/nlp/2018/07/18/torchtext.html)
 - [A Tutorial on Torchtext (Blog)](http://anie.me/On-Torchtext/)

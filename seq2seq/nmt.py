@@ -36,6 +36,12 @@ def detokenize(index, vocab):
     if vocab.itos[index] in ["<eos>", "<sos>", "<pad>"]:
         return ""
     return vocab.itos[index]
+def lr_scheduler(epoch):
+    if epoch <= 5:
+        return epoch
+    else:
+        return epoch * (0.5 ** (epoch-5))
+
 ### Seq2Seq Model
 class Encoder(nn.Module):
     """
@@ -151,7 +157,7 @@ class Seq2Seq(nn.Module):
 def train(model, iterator, optimizer, criterion):
     model.train()
     epoch_loss = 0
-    clip = 1
+    clip = 1 if args.lr < 0.1 else 5
     for i, batch in enumerate(iterator):
         optimizer.zero_grad()
 
@@ -182,7 +188,8 @@ def evaluate(model, iterator, vocab, print_eg=False):
     bleu_score = 0.
     num_sen = 0
     sf = SmoothingFunction()
-    f = open("test_results.txt", "w")
+    # Collect test sentence
+    # f = open("test_results.txt", "w")
     with torch.no_grad():
         for i, batch in enumerate(iterator):
 
@@ -198,14 +205,14 @@ def evaluate(model, iterator, vocab, print_eg=False):
             if print_eg:
                 print("Target sentence: \"{}\"".format(" ".join(trg[0])))
                 print("Hypothesis sentences: \"{}\"\n".format("\" , \"".join([ " ".join(sen) for sen in output[0]])))
-                for idx in range(len(trg)):
-                    f.write("Target sentence: \"{}\"\n".format(" ".join(trg[idx])))
-                    f.write("Hypothesis sentences: \"{}\"\n\n".format("\" , \"".join([ " ".join(sen) for sen in output[idx]])))
+                # for idx in range(len(trg)):
+                #     f.write("Target sentence: \"{}\"\n".format(" ".join(trg[idx])))
+                #     f.write("Hypothesis sentences: \"{}\"\n\n".format("\" , \"".join([ " ".join(sen) for sen in output[idx]])))
 
             for output_sens, trg_sen in zip(output, trg):
                 bleu_score += sentence_bleu(output_sens, trg_sen, smoothing_function=sf.method7)
                 num_sen += 1
-    f.close()
+    # f.close()
     return bleu_score * 100 / num_sen
 
 if __name__ == "__main__":
@@ -226,6 +233,7 @@ if __name__ == "__main__":
     parser.add_argument('-resume', type=str, help='load model from checkpoint(input: path of ckpt)')
     parser.add_argument('--evaluate', help='Not train, Only evaluate', action='store_true')
     parser.add_argument('-v', '--verbose', help="0: nothing, 1: test only, else: eval and test", type=int, default=1)
+    parser.add_argument('--decay', help="Halving lr for each epoch after 5th epoch", action='store_true')
     # multi gpu setting
     parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument("--no-multi", help="use single gpu", action="store_true")
@@ -270,9 +278,10 @@ if __name__ == "__main__":
     emd_dim = args.emd_dim
     hidden_dim = args.hidden_dim
     lr = args.lr
+    decay = args.decay
 
     params = [batch_size, rnn_type, reverse, bidirectional, num_layers, emd_dim, hidden_dim,
-                lr]
+                lr, decay]
     if args.distributed:
         params.append("MultiGPU")
     model_name = "seq2seq-{}".format("-".join([ str(p) for p in params ]))
@@ -324,6 +333,8 @@ if __name__ == "__main__":
         model = DDP(model, delay_allreduce=True)  # multi gpu
 
     optimizer = optim.SGD(model.parameters(), lr=lr) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=lr)
+    if decay:
+        scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_scheduler)
     if str(device) == 'cuda':
         criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>']).cuda()
     else:
@@ -334,6 +345,7 @@ if __name__ == "__main__":
         train_losses = []
         eval_scores = []
         best_eval_score = -float("inf")
+        # Load Existing Model
         if args.resume:
             print("Existing Model Loaded")
             checkpoint = torch.load(args.resume)
@@ -348,21 +360,29 @@ if __name__ == "__main__":
             optimizer = optim.SGD(model.parameters(), lr=load_args.lr) if load_args.opt == "sgd" else optim.Adam(model.parameters(), lr=load_args.lr)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # Training Main body
         model.train()
         print("Model Training Start\n")
         t1 = tt()
         epochs = load_epoch + epochs
         for epoch in range(load_epoch, epochs):
+            # Learning rate decay
+            if decay:
+                scheduler.step()
             tt1 = tt()
+            # Train
             train_loss = train(model, train_iterator, optimizer, criterion)
             tt2 = tt()
             print("[{}/{}]Train time per epoch: {:.3f}".format(epoch+1, epochs, tt2-tt1))
             train_losses.append(train_loss)
+            # Validation
             eval_score = evaluate(model, valid_iterator, target_field.vocab, args.verbose > 1)
             eval_scores.append(eval_score)
             tt3 = tt()
             print("[{}/{}]Eval time per epoch: {:.3f}".format(epoch+1, epochs, tt3-tt2))
+
             print("[{}/{}]Train loss: {:.4f}, BLEU score: {:.4f}\n".format(epoch+1, epochs, train_loss, eval_score))
+            # Update the best model
             if eval_score >= best_eval_score:
                 torch.save({
                         'epoch': epoch,
@@ -374,9 +394,10 @@ if __name__ == "__main__":
                         }, PATH + "-{}.ckpt".format(epoch))
                 best_eval_score = eval_score
                 print("Best Model Updated\n")
-            # break # for debugging
+
         t2 = tt()
         print("Model Training ends ({:.3f} min)\n".format((t2-t1) / 60))
+        # Save the final model
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
@@ -386,7 +407,7 @@ if __name__ == "__main__":
                 'args': args
                 }, PATH + "-final.ckpt")
         print("Model Saved\n")
-    # Evaluation - Test Dataset
+    # Evaluation on Test Dataset
     print("Model Evaluation on Test Dataset")
     et1 = tt()
     if args.evaluate and args.resume:
@@ -406,7 +427,7 @@ if __name__ == "__main__":
     et2 = tt()
     print("Evaluation Time: {:.4f} sec".format(et2-et1))
 
-    # plot and save plots
+    # plot loss and score and save plots
     save_path = model_name
     file_type = "pdf"
     plot_and_save(PATH + "-final.ckpt", save_path, file_type)
