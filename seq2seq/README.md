@@ -61,6 +61,8 @@ optional arguments:
                         0: nothing, 1: test only, else: eval and test
   --decay               Halving lr for each epoch after 5th epoch
   --local_rank LOCAL_RANK
+                        automatically selected by apex. do not set it
+                        manually.
   --no-multi            use single gpu
 ```
 ##### Plot Result
@@ -87,14 +89,13 @@ optional arguments:
 ```
 [Sentence] -> [TorchText Field]
 ```
-
 2. Model
 ```
 [Source Sentence] -> (Encoder) -> [Context Vector] -> (Decoder) -> [Translated Sentence]
 ```
 3. Evaluation
 ```
-(Model: Seq2Seq) -> [Hypothesis] -> (Compare with Target Sentence) -> [BLEU score]
+[Source Sentence] -> (Model: Seq2Seq) -> [Hypothesis] -> (Compare with Target Sentence) -> [BLEU score]
 ```
 
 ### Sample Result

@@ -235,7 +235,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', help="0: nothing, 1: test only, else: eval and test", type=int, default=1)
     parser.add_argument('--decay', help="Halving lr for each epoch after 5th epoch", action='store_true')
     # multi gpu setting
-    parser.add_argument("--local_rank", default=0, type=int)
+    parser.add_argument("--local_rank", help="automatically selected by apex. do not set it manually.", default=0, type=int)
     parser.add_argument("--no-multi", help="use single gpu", action="store_true")
     global args
     args = parser.parse_args()
