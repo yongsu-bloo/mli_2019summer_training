@@ -36,11 +36,6 @@ def detokenize(index, vocab):
     if vocab.itos[index] in ["<eos>", "<sos>", "<pad>"]:
         return ""
     return vocab.itos[index]
-def lr_scheduler(epoch):
-    if epoch <= 5:
-        return args.lr
-    else:
-        return args.lr * (0.5 ** (epoch-5))
 
 ### Seq2Seq Model
 class Encoder(nn.Module):
@@ -233,7 +228,6 @@ if __name__ == "__main__":
     parser.add_argument('-resume', type=str, help='load model from checkpoint(input: path of ckpt)')
     parser.add_argument('--evaluate', help='Not train, Only evaluate', action='store_true')
     parser.add_argument('-v', '--verbose', help="0: nothing, 1: test only, else: eval and test", type=int, default=1)
-    parser.add_argument('--decay', help="Halving lr for each epoch after 5th epoch", action='store_true')
     # multi gpu setting
     parser.add_argument("--local_rank", help="automatically selected by apex. do not set it manually.", default=0, type=int)
     parser.add_argument("--no-multi", help="use single gpu", action="store_true")
@@ -278,13 +272,12 @@ if __name__ == "__main__":
     emd_dim = args.emd_dim
     hidden_dim = args.hidden_dim
     lr = args.lr
-    decay = args.decay
     do_train = not args.evaluate
 
     print("Options: {}\n".format(args))
 
     params = [batch_size, rnn_type, reverse, bidirectional, num_layers, emd_dim, hidden_dim,
-                lr, decay]
+                lr]
     if args.distributed:
         params.append("MultiGPU")
 
@@ -337,8 +330,6 @@ if __name__ == "__main__":
         model = DDP(model, delay_allreduce=True)  # multi gpu
 
     optimizer = optim.SGD(model.parameters(), lr=lr) if args.opt == "sgd" else optim.Adam(model.parameters(), lr=lr)
-    if decay:
-        scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_scheduler)
     if str(device) == 'cuda':
         criterion = nn.NLLLoss(ignore_index=target_field.vocab.stoi['<pad>']).cuda()
     else:
@@ -370,9 +361,6 @@ if __name__ == "__main__":
         t1 = tt()
         epochs = load_epoch + epochs
         for epoch in range(load_epoch, epochs):
-            # Learning rate decay
-            if decay:
-                scheduler.step()
             tt1 = tt()
             # Train
             train_loss = train(model, train_iterator, optimizer, criterion)

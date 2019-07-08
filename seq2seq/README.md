@@ -59,7 +59,6 @@ optional arguments:
   --evaluate            Not train, Only evaluate
   -v VERBOSE, --verbose VERBOSE
                         0: nothing, 1: test only, else: eval and test
-  --decay               Halving lr for each epoch after 5th epoch
   --local_rank LOCAL_RANK
                         automatically selected by apex. do not set it
                         manually.
