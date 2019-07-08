@@ -36,7 +36,7 @@ usage: nmt.py [-h] [-seed SEED] [-b BATCH_SIZE] [-num-layers NUM_LAYERS]
               [-emd-dim EMD_DIM] [-hidden-dim HIDDEN_DIM] [--no-reverse]
               [--bidirectional] [-lr LR] [-rnn-type {LSTM,GRU}]
               [-opt {adam,sgd}] [-epochs EPOCHS] [-dropout DROPOUT] [--cpu]
-              [-resume RESUME] [--evaluate] [-v VERBOSE] [--decay]
+              [-resume RESUME] [--evaluate] [-v VERBOSE]
               [--local_rank LOCAL_RANK] [--no-multi]
 
 optional arguments:
