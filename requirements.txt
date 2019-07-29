@@ -9,6 +9,7 @@ torchvision>=0.3.0
 # text
 torchtext
 spacy
+nltk
 
 # basic tools
 numpy
@@ -18,10 +19,10 @@ scikit-learn
 
 # visualization
 matplotlib
-#ipython
-jupyter
 tb-nightly
 future
+ipython
+jupyter
 
 # utils
-tqdm
+#tqdm

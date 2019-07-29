@@ -1,0 +1,23 @@
+# Python 3.6, CUDA 10.0, cudnn 7.5
+# torch 1.1.0
+https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
+
+# text
+torchtext
+spacy
+nltk
+
+# basic tools
+numpy
+scipy
+#pandas
+#scikit-learn
+
+# visualization
+matplotlib
+ipython
+jupyter
+
+# utils
+#tqdm
+dataclasses
