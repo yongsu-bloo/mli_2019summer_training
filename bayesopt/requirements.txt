@@ -1,3 +1,6 @@
 torch
+gpytorch
 botorch
 numpy
+scipy
+scikit-learn

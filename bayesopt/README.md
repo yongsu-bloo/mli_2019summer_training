@@ -1,5 +1,7 @@
 # Practical Bayesian Optimization of Machine Learning Algorithms
 
+TODO Project
+
 ## Original Paper
 Snoek, J., Larochelle, H., & Adams, R. P. (2012). Practical bayesian optimization of machine learning algorithms. In Advances in neural information processing systems (pp. 2951-2959). [[link](https://papers.nips.cc/paper/4522-practical-bayesian-optimization-of-machine-learning-algorithms)]
 ```
